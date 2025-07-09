@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>🎲 Cassino Completo com Bloqueio Pix</title>
+  <style>
+    body {
+      background: #111;
+      color: white;
+      font-family: sans-serif;
+      text-align: center;
+      padding: 30px;
+      margin: 0;
+      overflow-x: hidden;
+    }
+    h1 {
+      font-size: 2.5em;
+      color: #fddb3a;
+      margin-bottom: 10px;
+    }
+    .menu {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .menu button {
+      padding: 10px 20px;
+      font-size: 1em;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background: #444;
+      color: white;
+      transition: background 0.3s;
+    }
+    .menu button:hover {
+      background: #666;
+    }
+    .jogo {
+      display: none;
+      margin-top: 20px;
+    }
+    .ativo {
+      display: block;
+    }
+    .saldo {
+      margin-top: 10px;
+      font-size: 1.3em;
+    }
+    /* ROLETA */
+    .roleta-container {
+      position: relative;
+      width: 300px;
+      height: 300px;
+      margin: 40px auto;
+    }
+    .roleta {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: 10px solid white;
+      box-shadow: 0 0 20px #fff;
+      background: conic-gradient(
+        #ff0000 0deg 45deg,
+        #00ff00 45deg 90deg,
+        #ff0000 90deg 135deg,
+        #00ffff 135deg 180deg,
+        #ff0000 180deg 225deg,
+        #ffff00 225deg 270deg,
+        #ff0000 270deg 315deg,
+        #00ff00 315deg 360deg
+      );
+      transition: transform 4s ease-out;
+    }
+    .ponteiro {
+      position: absolute;
+      top: -25px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 15px solid transparent;
+      border-right: 15px solid transparent;
+      border-bottom: 25px solid #fddb3a;
+      filter: drop-shadow(0 0 6px #fddb3a);
+      z-index: 10;
+    }
+    .botao {
+      margin-top: 30px;
+      padding: 15px 30px;
+      font-size: 1.2em;
+      background: #e91e63;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      box-shadow: 0 0 10px #e91e63aa;
+      transition: background 0.3s;
+    }
+    .botao:hover {
+      background: #c2185b;
+    }
+    .historico {
+      margin-top: 30px;
+      text-align: left;
+      max-width: 400px;
+      margin: 0 auto;
+      max-height: 150px;
+      overflow-y: auto;
+      border: 1px solid #444;
+      padding: 10px;
+      border-radius: 8px;
+      background: #222;
+    }
+    .historico-item {
+      border-bottom: 1px solid #333;
+      padding: 8px 0;
+      font-size: 0.9em;
+    }
+    input[type="number"] {
+      padding: 10px;
+      font-size: 1em;
+      width: 100px;
+      margin-top: 10px;
+      border-radius: 5px;
+      border: none;
+      text-align: center;
+    }
+    /* BLOQUEIO */
+    #bloqueio {
+      position: fixed;
+      top:0; left:0; width:100%; height:100%;
+      background:#000000dd; color:white;
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      z-index:9999;
+      font-family:sans-serif;
+      padding: 20px;
+    }
+    #bloqueio h2 {
+      font-size: 2em;
+      margin-bottom: 10px;
+    }
+    #bloqueio h3 {
+      color: yellow;
+      user-select: text;
+      margin: 10px 0;
+    }
+    #bloqueio button {
+      padding: 12px 25px;
+      font-size: 1.2em;
+      background: #28a745;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 15px;
+      transition: background 0.3s;
+    }
+    #bloqueio button:disabled {
+      background: #888;
+      cursor: not-allowed;
+    }
+    #bloqueio p#mensagemStatus {
+      margin-top: 20px;
+      font-size: 1.1em;
+      min-height: 24px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TELA DE BLOQUEIO -->
+  <div id="bloqueio">
+    <h2>🔒 Cassino Bloqueado</h2>
+    <p>Para acessar, envie um Pix 
+      de 5 reais para a chave:</p>
+    <h3>162.143.399-42</h3>
+    <p>Após o envio, clique no botão abaixo para confirmar o pagamento.</p>
+    <button id="botaoPix">✅ Já paguei</button>
+    <p id="mensagemStatus"></p>
+  </div>
+
+  <!-- CONTEÚDO DO CASSINO -->
+  <h1>🎰 Cassino Virtual</h1>
+  <div class="saldo">💰 Saldo: R$ <span id="saldo">0.00</span></div>
+
+  <div class="menu">
+    <button onclick="mostrarJogo('roleta')">Roleta</button>
+    <button onclick="mostrarJogo('slots')">Caça-Níquel</button>
+    <button onclick="mostrarJogo('caraCoroa')">Cara ou Coroa</button>
+  </div>
+
+  <!-- JOGO: ROLETA -->
+  <div id="roleta" class="jogo ativo">
+    <h2>🎡 Roleta</h2>
+    <div class="roleta-container">
+      <div class="ponteiro"></div>
+      <div class="roleta" id="roletaCanvas"></div>
+    </div>
+    <label for="valorRoleta">Valor da aposta:</label><br>
+    <input type="number" id="valorRoleta" min="1" value="10"><br>
+    <button class="botao" onclick="girarRoleta()">🎡 Girar Roleta</button>
+    <div class="historico" id="historicoRoleta"></div>
+  </div>
+
+  <!-- JOGO: SLOT MACHINE -->
+  <div id="slots" class="jogo">
+    <h2>🎰 Caça-Níquel</h2>
+    <div id="reels" style="font-size: 3em; margin: 20px;">🍒 🍋 🍊</div>
+    <input type="number" id="valorSlot" min="1" value="10">
+    <br><br>
+    <button class="botao" onclick="girarSlot()">Girar</button>
+    <p id="resultadoSlot"></p>
+  </div>
+
+  <!-- JOGO: CARA OU COROA -->
+  <div id="caraCoroa" class="jogo">
+    <h2>🪙 Cara ou Coroa</h2>
+    <input type="number" id="valorCoroa" min="1" value="10"><br><br>
+    <button class="botao" onclick="jogarCoroa('cara')">Apostar em Cara</button>
+    <button class="botao" onclick="jogarCoroa('coroa')">Apostar em Coroa</button>
+    <p id="resultadoCoroa"></p>
+  </div>
+
+<script>
+  // BLOQUEIO PIX SIMULADO
+  const bloqueio = document.getElementById('bloqueio');
+  const botaoPix = document.getElementById('botaoPix');
+  const mensagemStatus = document.getElementById('mensagemStatus');
+
+  botaoPix.addEventListener('click', () => {
+    botaoPix.disabled = true;
+    mensagemStatus.textContent = '⏳ Confirmando pagamento, por favor aguarde...';
+
+    setTimeout(() => {
+      mensagemStatus.textContent = '✅ Pagamento confirmado! Acesso liberado.';
+      setTimeout(() => {
+        bloqueio.style.display = 'none';
+      }, 2000);
+    }, 10000);
+  });
+
+  // SALDO GLOBAL
+  let saldo = 100;
+  const saldoEl = document.getElementById('saldo');
+  function atualizarSaldo(valor) {
+    saldo += valor;
+    saldoEl.textContent = saldo.toFixed(2);
+  }
+
+  // MENU DE JOGOS
+  function mostrarJogo(id) {
+    document.querySelectorAll('.jogo').forEach(j => j.classList.remove('ativo'));
+    document.getElementById(id).classList.add('ativo');
+  }
+
+  // ROLETA
+  const roletaEl = document.getElementById("roletaCanvas");
+  const historicoRoleta = document.getElementById("historicoRoleta");
+
+  const setores = [
+    { texto: "Perdeu", valor: -1 },
+    { texto: "x2", valor: 2 },
+    { texto: "Perdeu", valor: -1 },
+    { texto: "x3", valor: 3 },
+    { texto: "Perdeu", valor: -1 },
+    { texto: "JACKPOT x5", valor: 5 },
+    { texto: "Perdeu", valor: -1 },
+    { texto: "x2", valor: 2 }
+  ];
+
+  function girarRoleta() {
+    const valorAposta = parseFloat(document.getElementById("valorRoleta").value);
+    if (isNaN(valorAposta) || valorAposta <= 0) {
+      alert("Valor inválido");
+      return;
+    }
+    if (valorAposta > saldo) {
+      alert("Saldo insuficiente.");
+      return;
+    }
+
+    atualizarSaldo(-valorAposta);
+
+    const index = Math.floor(Math.random() * setores.length);
+    const grausPorSetor = 360 / setores.length;
+    const grauFinal = 360 * 6 + index * grausPorSetor + grausPorSetor / 2;
+
+    roletaEl.style.transition = "transform 4s ease-out";
+    roletaEl.style.transform = `rotate(${grauFinal}deg)`;
+
+    setTimeout(() => {
+      const resultado = setores[index];
+      let ganho = 0;
+      if (resultado.valor > 0) {
+        ganho = valorAposta * resultado.valor;
+        atualizarSaldo(ganho);
+      }
+
+      const item = document.createElement("div");
+      item.className = "historico-item";
+      item.textContent = `🎯 Resultado: ${resultado.texto} | Aposta: R$${valorAposta.toFixed(2)} | Retorno: R$${ganho.toFixed(2)}`;
+      historicoRoleta.prepend(item);
+    }, 4500);
+  }
+
+  // CAÇA-NÍQUEL
+  function girarSlot() {
+    const valor = parseFloat(document.getElementById("valorSlot").value);
+    if (valor > saldo || valor <= 0) {
+      alert("Aposta inválida.");
+      return;
+    }
+    atualizarSaldo(-valor);
+
+    const simbolos = ["🍒", "🍋", "🍊", "⭐", "🍇"];
+    const resultado = [
+      simbolos[Math.floor(Math.random() * simbolos.length)],
+      simbolos[Math.floor(Math.random() * simbolos.length)],
+      simbolos[Math.floor(Math.random() * simbolos.length)]
+    ];
+
+    document.getElementById("reels").textContent = resultado.join(" ");
+    let ganhos = 0;
+    if (resultado[0] === resultado[1] && resultado[1] === resultado[2]) {
+      ganhos = valor * 5;
+    } else if (resultado
